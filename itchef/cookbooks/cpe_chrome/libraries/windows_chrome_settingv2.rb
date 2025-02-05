@@ -61,6 +61,7 @@ class WindowsChromeIterableSetting < WindowsChromeSettingV2
   # sequentially from [1...N]
   def to_chef_reg_provider
     list = []
+    return list if @value.nil?
     @value.each_with_index do |entry, index|
       list << { :name => (index + 1).to_s, :type => @type, :data => entry }
     end
@@ -76,7 +77,7 @@ class WindowsChromeFlatSetting < WindowsChromeSettingV2
     elsif @value.is_a?(FalseClass)
       @value = 0
     elsif JSONIFY_REG_KEYS['Chrome'].include?(@subkey)
-      @value = @value.to_json
+      @value = @value.to_json unless @value.is_a?(String)
     end
 
     [{ :name => @subkey, :type => @type, :data => @value }]

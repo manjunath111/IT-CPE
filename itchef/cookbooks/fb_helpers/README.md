@@ -39,6 +39,15 @@ your node.
 * `node.centos9?`
     Is CentOS Stream 9
 
+* `node.centos10?`
+    Is CentOS Stream 10
+
+* `node.centos_max_version?(v)`
+    Is RHEL-compatible with a maximum version number of v
+
+* `node.centos_min_version?(v)`
+    Is RHEL-compatible with a minimum version number of v
+
 * `node.fedora?`
     Is Fedora
 
@@ -72,6 +81,21 @@ your node.
 * `node.fedora36?`
     Is Fedora 36
 
+* `node.fedora37?`
+    Is Fedora 37
+
+* `node.fedora38?`
+    Is Fedora 38
+
+* `node.fedora39?`
+    Is Fedora 39
+
+* `node.fedora40?`
+    Is Fedora 40
+
+* `node.eln?`
+    Is Fedora ELN
+
 * `node.redhat?`
     Is Redhat Enterprise Linux
 
@@ -87,6 +111,15 @@ your node.
 * `node.redhat9?`
     Is Redhat Enterprise Linux 9
 
+* `node.redhat10?`
+    Is Redhat Enterprise Linux 10
+
+* `node.rhel_max_version?(v)`
+    Is Redhat Enterprise Linux with a maximum major version number of v
+
+* `node.rhel_min_version?(v)`
+    Is Redhat Enterprise Linux with a minimum major version number of v
+
 * `node.rhel?`
     Is Redhat Enterprise Linux
 
@@ -96,8 +129,14 @@ your node.
 * `node.rhel8?`
     Is Redhat Enterprise Linux 8
 
+* `node.rhel8_8?`
+    Is Redhat Enterprise Linux 8.8
+
 * `node.rhel9?`
     Is Redhat Enterprise Linux 9
+
+* `node.rhel10?`
+    Is Redhat Enterprise Linux 10
 
 * `node.oracle?`
     Is Oracle Enterprise Linux
@@ -113,6 +152,15 @@ your node.
 
 * `node.oracle8?`
     Is Oracle Enterprise Linux 8
+
+* `node.rhel_family?`
+    Is Redhat Enterprise Linux-compatible (eg CentOS, Oracle Linux, Rocky Linux)
+
+* `node.el_max_version?(v)`
+    Is RHEL-compatible with a maximum version number of v
+
+* `node.el_min_version?(v)`
+    Is RHEL-compatible with a minimum version number of v
 
 * `node.debian?`
     Is Debian
@@ -191,6 +239,15 @@ your node.
 
 * `node.aristaeos?`
     Is network switch running Arista EOS
+
+* `node.aristaeos_4_28_or_newer?`
+    Is network switch running Arista EOS and OS version is 4.28 or newer
+
+* `node.aristaeos_4_30_or_newer?`
+    Is network switch running Arista EOS and OS version is 4.30 or newer
+
+* `node.aristaeos_4_32_or_newer?`
+    Is network switch running Arista EOS and OS version is 4.32 or newer
 
 * `node.embedded?`
     Is embedded Linux, implies 'node.aristaeos?'. These devices likely have
@@ -429,6 +486,13 @@ your node.
    True if `node['fb_helpers']['interface_start_allowed_method']` is set and
    returns true, or if `node.interface_change_allowed?` is true.
 
+* `node.disruptable?`
+    A gate which can be used to limit dangerous code paths to only run during
+    provisioning, boot, or other times when the host is not running a
+    workload and can disrupted.  For initial boot you must
+    pass `CHEF_BOOT_SERVICE=true` as an environment variable from your
+    boot-time chef invocation.
+
 ### FB::Helpers
 The following constants are available:
 
@@ -443,6 +507,12 @@ The following methods are available:
    If the client supports lazy attributes a DelayedEvaluator is returned, but
    if the client does not support lazy attributes the block is evaluated and
    the value is returned
+
+* `FB::Helpers.evaluate_lazy_enumerable { my_enumerable }`
+   Should be used when a potentially nested Enumerable contains a
+   Chef::DelayedEvaluator that will not be directly assigned
+   directly to resource attribute.  This should only be executed at converge time
+   within a lazy block.
 
 * `FB::Helpers.commentify(comment, arg)`
    Commentify takes the string in `comment` and wraps it appropriately
@@ -494,6 +564,17 @@ The following methods are available:
   it matches what is expected. If `fallback` is true, return an empty object
   in case of errors.
 
+* `FB::Helpers.parse_simple_keyvalue_file(path, options)`
+  Parse a simple key/value file with the form key=value and return a hash of
+  key/value pairs, stripping leading and trailing whitespace unless otherwise
+  specified. Accepts the following options:
+  * `:force_downcase` - if true, coerces keys into lower case.
+  * `:empty_value_is_nil` - if true, coerces empty string values to nil.
+  * `:include_whitespace` - if true, treats whitespace in the key/value pairs
+    as semantic
+  * `:exclude_quotes` - if true, removes surrounding quotes
+  * `:fallback` - if true, return an empty hash in case of errors.
+
 * `FB::Helpers.parse_timeshard_start(time)`
   Takes a time string and converts its contents to a unix timestamp,
    to be used in computing timeshard information.
@@ -522,6 +603,10 @@ The following methods are available:
   Test if a group is defined on the system. Usually this would be checked by
   looking at `node['etc']['group']` but if the group was added during the same
   chef run then ohai won't have it, unless ohai was reloaded.
+
+* `FB::Helpers.get_hwaddr(interface)`
+  Return the hardware (MAC) address of the interface or nil if no such interface
+  was found.
 
 * `FB::Version.new(version)`
    Helper class to compare software versions. Sample usage:

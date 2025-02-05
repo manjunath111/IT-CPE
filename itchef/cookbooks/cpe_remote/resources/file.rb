@@ -19,6 +19,7 @@
 resource_name :cpe_remote_file
 default_action :create
 provides :cpe_remote_file
+unified_mode(false) if Chef::VERSION >= 18
 
 property :folder_name, String, :name_property => true
 # see https://github.com/chef/chef/blob/ +
@@ -44,12 +45,17 @@ action_class do
   include CPE::Remote
 end
 
-load_current_value do |desired| # ~FC006
+load_current_value do |desired| # rubocop:disable Chef/Correctness/ServiceResource
   path = desired.path
   if ::File.exist?(path)
     f_stat = ::File.stat(path)
     checksum_ondisk = Chef::Digester.checksum_for_file(path)
-    checksum checksum_ondisk
+    # Only set current checksum if one was passed in. This ensures
+    # this resource is idempotent when a nil checksum is used.
+    unless desired.checksum.nil?
+      checksum checksum_ondisk
+    end
+
     unless platform?('windows')
       begin
         current_user = ::Etc.getpwuid(f_stat.uid).name
@@ -66,6 +72,8 @@ load_current_value do |desired| # ~FC006
       m = f_stat.mode
       mode "0#{(m & 07777).to_s(8)}"
     end
+  else
+    current_value_does_not_exist!
   end
 end
 
@@ -107,7 +115,9 @@ action :create do
       mode new_resource.mode
       owner new_resource.owner
       group new_resource.group
-      checksum new_resource.checksum
+      unless new_resource.checksum.nil?
+        checksum new_resource.checksum
+      end
       backup new_resource.backup
       headers(hders) if hders
     end

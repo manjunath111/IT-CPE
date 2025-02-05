@@ -15,10 +15,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-require 'chef'
+require './spec/spec_helper'
 require_relative '../libraries/fb_helpers'
 
-describe FB::Helpers do
+recipe 'fb_helpers::spec' do
+  let(:node) { Chef::Node.new }
+
+  context 'evaluate_lazy_enumerable' do
+    before do
+      stub_const('Chef::VERSION', '17.0.42')
+    end
+
+    it 'makes no change to simple hash' do
+      test_var = { 'test' => 'var' }
+
+      expect(FB::Helpers.evaluate_lazy_enumerable(test_var)).to eq(test_var)
+    end
+
+    it 'evaluates a simple hash' do
+      target = { 'test' => 'test' }
+      test_var = { 'test' => FB::Helpers.attempt_lazy { 'test' } }
+
+      expect(FB::Helpers.evaluate_lazy_enumerable(test_var)).to eq(target)
+    end
+
+    it 'evaluates a multi-level hash' do
+      target = { 'level1' => {
+        'level2' => 'test',
+      } }
+      test_var = { 'level1' => {
+        'level2' => FB::Helpers.attempt_lazy { 'test' },
+      } }
+
+      expect(FB::Helpers.evaluate_lazy_enumerable(test_var)).to eq(target)
+    end
+
+    it 'evaluates a an array of hashes' do
+      target = { 'level1' => [
+        { 'array_1' => 'test' },
+        { 'array_2' => 'test' },
+      ] }
+      test_var = { 'level1' => [
+        { 'array_1' => FB::Helpers.attempt_lazy { 'test' } },
+        { 'array_2' => FB::Helpers.attempt_lazy { 'test' } },
+      ] }
+
+      expect(FB::Helpers.evaluate_lazy_enumerable(test_var)).to eq(target)
+    end
+
+    it 'evaluates a an array of DelayedEvaluators' do
+      target = ['test', 'test1']
+
+      test_var = [
+        FB::Helpers.attempt_lazy { 'test' },
+        FB::Helpers.attempt_lazy { 'test1' },
+      ]
+
+      expect(FB::Helpers.evaluate_lazy_enumerable(test_var)).to eq(target)
+    end
+  end
+
   context 'attempt_lazy' do
     it 'returns a DelayedEvaluator for chef 17.0.42' do
       stub_const('Chef::VERSION', '17.0.42')
@@ -108,6 +164,79 @@ describe FB::Helpers do
     it 'parses a basic JSON file, and ignores broken JSON' do
       allow(File).to receive(:read).with(PATH).and_return('{bar}')
       expect(FB::Helpers.parse_json_file(PATH, Hash, true)).to eq({})
+    end
+  end
+
+  context 'parse_simple_keyvalue_file' do
+    path = 'keyvalue_file.txt'.freeze
+
+    it 'throws an error when told to read a file that cannot be read' do
+      allow(IO).to receive(:readlines).with(path).and_raise(Errno::ENOENT)
+      expect do
+        FB::Helpers.parse_simple_keyvalue_file(path)
+      end.to raise_error(RuntimeError)
+    end
+
+    it 'ignores a file that cannot be read when told to do so' do
+      allow(IO).to receive(:readlines).with(path).and_raise(Errno::ENOENT)
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :fallback => true)).to eq({})
+    end
+
+    it 'parses an empty Key/Value file' do
+      allow(IO).to receive(:readlines).with(path).and_return([])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path)).to eq({})
+    end
+
+    it 'parses a basic Key/Value file' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY=value'])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path)).to eq({ 'KEY' => 'value' })
+    end
+
+    it 'parses a basic Key/Value file with an empty value' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY='])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path)).to eq({ 'KEY' => '' })
+    end
+
+    it 'parses a basic Key/Value file with an empty value, coercing it to nil where required' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY='])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :empty_value_is_nil => true)).to eq({ 'KEY' => nil })
+    end
+
+    it 'parses a basic Key/Value file, downcasing keys when told to' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY=value'])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :force_downcase => true)).to eq({ 'key' => 'value' })
+    end
+
+    it 'parses a multiline Key/Value file' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY=value', 'KEY2=val'])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path)).to eq({ 'KEY' => 'value', 'KEY2' => 'val' })
+    end
+
+    it 'parses a basic Key/Value file with leading and trailing spaces' do
+      allow(IO).to receive(:readlines).with(path).and_return([' KEY=value '])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path)).to eq({ 'KEY' => 'value' })
+    end
+
+    it 'parses a basic Key/Value file with spaces' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY = value'])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path)).to eq({ 'KEY' => 'value' })
+    end
+
+    it 'treats whitespace as semantic when required' do
+      allow(IO).to receive(:readlines).with(path).and_return([' KEY = value '])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :include_whitespace =>true)).to eq({ ' KEY ' => ' value ' })
+    end
+
+    it 'treats quotes as semantic when required - single quotes' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY = \'value\''])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :exclude_quotes =>false)).to eq({ 'KEY' => '\'value\'' })
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :exclude_quotes =>true)).to eq({ 'KEY' => 'value' })
+    end
+
+    it 'treats quotes as semantic when required - double quotes' do
+      allow(IO).to receive(:readlines).with(path).and_return(['KEY = "value"'])
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :exclude_quotes =>false)).to eq({ 'KEY' => '"value"' })
+      expect(FB::Helpers.parse_simple_keyvalue_file(path, :exclude_quotes =>true)).to eq({ 'KEY' => 'value' })
     end
   end
 
@@ -481,6 +610,22 @@ describe FB::Helpers do
                                       '1_deep_b' => 1,
                                     },
                                   })
+    end
+  end
+
+  context 'readfile' do
+    PATH = 'filename'.freeze
+    it 'ignores non-existing path' do
+      allow(File).to receive(:read).with(PATH).and_raise(Errno::ENOENT)
+      expect(FB::Helpers.readfile(PATH)).to eq('')
+    end
+    it 'reads content' do
+      allow(File).to receive(:read).with(PATH).and_return('content')
+      expect(FB::Helpers.readfile(PATH)).to eq('content')
+    end
+    it 'removes line terminator' do
+      allow(File).to receive(:read).with(PATH).and_return("line with terminator\n")
+      expect(FB::Helpers.readfile(PATH)).to eq('line with terminator')
     end
   end
 end
