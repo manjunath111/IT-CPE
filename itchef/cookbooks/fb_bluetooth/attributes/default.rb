@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Cookbook Name:: cpe_bluetooth
+# Cookbook Name:: fb_bluetooth
 # Attributes:: default
 
 # Disable bluetooth setup assistant for mouse and keyboard
 
-default['cpe_bluetooth'] = {
+default['fb_bluetooth'] = {
   'BluetoothAutoSeekKeyboard' => nil,
   'BluetoothAutoSeekPointingDevice' => nil,
 }
