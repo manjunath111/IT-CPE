@@ -22,6 +22,7 @@ default['cpe_chrome'] = {
   'validate_installed' => false,
   'install_package' => false,
   'manage_repo' => false,
+  'repo_proxy' => nil,
   'extension_profile' => {
     # '1234567890qwertyuiop' => {
     #   'display_name' => 'Example Extension',
@@ -47,19 +48,21 @@ default['cpe_chrome'] = {
     'DefaultSearchProviderKeyword' => nil,
     'DefaultSearchProviderName' => nil,
     'DefaultSearchProviderSearchURL' => nil,
+    'DownloadRestrictions' => nil,
     'ExtensionInstallSources' => [],
     'ManagedBookmarks' => [],
     'PluginsAllowedForUrls' => [],
     'RelaunchNotification' => nil,
     'RelaunchNotificationPeriod' => nil,
+    'SafeBrowsingProtectionLevel' => nil,
     'TotalMemoryLimitMb' => nil,
     'URLAllowlist' => [],
     'URLBlocklist' => [],
+    'PasswordManagerEnabled' => nil,
   },
   'mp' => {
     'UseMasterPreferencesFile' => false,
     'FileContents' => {},
   },
   'canary_ignored_prefs' => [],
-  '_use_new_windows_provider' => false,
 }
