@@ -17,6 +17,7 @@
 
 resource_name :cpe_dconf
 provides :cpe_dconf, :os => 'linux'
+unified_mode(false) if Chef::VERSION >= 18
 default_action :update
 
 action :update do
@@ -27,6 +28,7 @@ action :update do
     'debian' => 'dconf-cli',
     :default => 'dconf',
   )
+  # rubocop:disable Chef/Meta/CPEPackageResource
   package dconf_cli_pkg do
     action :upgrade
   end
@@ -96,7 +98,7 @@ action :update do
     end
 
     # Generate locks file
-    template ::File.join(dconf_db_dir, 'locks', comp) do # ~FB031
+    template ::File.join(dconf_db_dir, 'locks', comp) do
       source 'dconf-generic-locks.erb'
       owner 'root'
       group 'root'
