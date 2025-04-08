@@ -43,7 +43,6 @@ end
 
 if node.macos?
   run_list += [
-    'cpe_bluetooth',
     'cpe_deprecation_notifier',
     'cpe_munki',
     'cpe_powermanagement',
@@ -51,7 +50,7 @@ if node.macos?
     'cpe_spotlight',
     # Here Be Dragons... Ordering is important.
     # launchd and profiles need to be last, as other apis depend on these
-    'cpe_launchd',
+    'fb_launchd',
     'cpe_profiles',
   ]
 elsif node.windows?
