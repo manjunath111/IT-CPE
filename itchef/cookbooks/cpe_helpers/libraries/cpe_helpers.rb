@@ -86,7 +86,7 @@ module CPE
 
     def self.loginwindow?
       if macos?
-        ['root', '_mbsetupuser'].include?(console_user)
+        macos_local_account?(get_macos_console_user.to_s)
       elsif linux?
         loginctl_users.any? do |u|
           u['user'] == 'gdm'
@@ -140,11 +140,30 @@ module CPE
         end
     end
 
+    def self.get_macos_console_user
+      @console_user ||=
+        ::Etc.getpwuid(::File.stat('/dev/console').uid).name
+    rescue StandardError => e
+      Chef::Log.warn("Unable to determine macos_console_user: #{e}")
+      nil
+    end
+
+    def self.macos_local_account?(user)
+      ['root', '_mbsetupuser', 'admin'].include?(user.to_s)
+    end
+
     def self.console_user
       # memoize the value so it isn't executed multiple times per run
       @console_user ||=
         if macos?
-          ::Etc.getpwuid(::File.stat('/dev/console').uid).name
+          user = get_macos_console_user.to_s
+          # use machine_owner if console user is a local account
+          # prevents running chef as "root" user
+          if macos_local_account?(user)
+            machine_owner
+          else
+            user
+          end
         elsif linux?
           filtered_users = loginctl_users.select do |u|
             u['user'] != 'gdm' && u['uid'] >= 1000
@@ -205,7 +224,7 @@ module CPE
     end
 
     def self.windows?
-      RUBY_PLATFORM =~ /mswin|mingw32|windows/
+      RUBY_PLATFORM =~ /mswin|mingw|windows/
     end
 
     def self.logged_on_user_query

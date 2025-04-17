@@ -20,6 +20,7 @@ require 'json'
 
 resource_name :cpe_munki_local
 provides :cpe_munki_local, :os => 'darwin'
+unified_mode(false) if Chef::VERSION >= 18
 default_action :run
 
 action :run do
@@ -44,7 +45,7 @@ action :run do
   @catalog_items = parse_items_in_catalogs
 
   local_manifest = node['cpe_munki']['preferences']['LocalOnlyManifest']
-  file "/Library/Managed Installs/manifests/#{local_manifest}" do # ~FC005
+  file "/Library/Managed Installs/manifests/#{local_manifest}" do
     owner 'root'
     group 'wheel'
     mode '644'
@@ -74,6 +75,7 @@ end
 
 def validate_install_array(install_array)
   catalog_items = parse_items_in_catalogs
+  install_array = FB::Helpers.evaluate_lazy_enumerable(install_array.to_a).compact
   return install_array if catalog_items.empty?
   ret = []
   install_array.uniq.each do |item|
@@ -99,6 +101,20 @@ def gen_plist
   optionals = validate_install_array(
     node['cpe_munki']['local']['optional_installs'],
   )
+
+  # Check for common elements in installs and uninstalls
+  common_elements = installs & uninstalls
+  if !common_elements.empty?
+    ::Chef::Log.warn(
+      "#{cookbook_name}: Found #{common_elements.size} items that are both
+      marked for install and uninstall: #{common_elements.join(', ')}. Common elements removed from installs
+      as uninstalls take precedence.",
+    )
+  end
+
+  # Remove elements from installs that are present in uninstalls
+  installs -= uninstalls
+
   plist_hash = {
     'managed_installs' => installs,
     'managed_uninstalls' => uninstalls,

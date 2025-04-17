@@ -1,6 +1,6 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 
-name 'cpe_bluetooth'
+name 'fb_bluetooth'
 maintainer 'Facebook'
 maintainer_email 'noreply@facebook.com'
 license 'Apache-2.0'

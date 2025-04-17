@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta, Inc. and its affiliates.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Cookbook Name:: cpe_launchd
+# Cookbook Name:: fb_bluetooth
 # Recipes:: default
 
 return unless node.macos?
 
-cpe_launchd 'Managing all of launchd'
-
-cpe_launchd 'Cleaning up un-needed launch daemons' do
-  action :clean_up
+profile_name = FB::Bluetooth.profile_name(node)
+node.default['cpe_profiles'][profile_name] = FB::Helpers.attempt_lazy do
+  FB::Bluetooth.generate_profile(node)
 end

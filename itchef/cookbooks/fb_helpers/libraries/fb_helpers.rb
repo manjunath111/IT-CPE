@@ -51,6 +51,36 @@ module FB
       end
     end
 
+    # evaluate_lazy_hash() should be used to evaluate an object that contains
+    # DelayedEvaluators that will not be assigned to an attribute and hence be
+    # evaluated
+    #
+    # Usage:
+    #   evaluate_lazy_enumerable { my_enumerable }
+    #
+    # Arguments:
+    #   my_enumerable: An enumerable that contains elements that should be evaluated
+    #
+    def self.evaluate_lazy_enumerable(my_enumerable)
+      if my_enumerable.respond_to?(:each_pair)
+        my_enumerable.each_pair do |key, value|
+          if value.respond_to?(:each)
+            evaluate_lazy_enumerable(value)
+          elsif value.is_a?(::Chef::DelayedEvaluator)
+            my_enumerable[key] = value.call
+          end
+        end
+      elsif my_enumerable.respond_to?(:each)
+        my_enumerable.each_with_index do |element, index|
+          if element.respond_to?(:each)
+            evaluate_lazy_enumerable(element)
+          elsif element.is_a?(::Chef::DelayedEvaluator)
+            my_enumerable[index] = element.call
+          end
+        end
+      end
+    end
+
     # commentify() takes a text string and converts it to a (possibly)
     # multi-line comment suitable for dropping into a config file.
     #
@@ -447,6 +477,38 @@ If the has is specified, it takes one or more of the following keys:
       self.parse_json(content, top_level_class, fallback)
     end
 
+    # parse_simple_keyvalue_file() takes a path string which contains lines of
+    # the form key=value and converts it to a ruby hash.
+    #
+    # Usage: parse_simple_keyvalue_file(path)
+    #
+    # Arguments:
+    # path: Required string. Path to the file to parse.
+    # options: Optional symbol / bool hash, designates non-default behaviors
+    #  - :force_downcase - forces keys to lowercase values
+    #  - :fallback - returns empty hash instead of an error in case of IOError on file
+    #  - :empty_value_is_nil - k/v pairs where v.empty? is true have v coerced to nil
+    #  - :include_whitespace - treats leading and trailing whitespace as semantic
+    #  - :exclude_quotes strips surrounding quotes
+
+    def self.parse_simple_keyvalue_file(path, options = {})
+      parsed = {}
+      begin
+        IO.readlines(path).each do |line|
+          (k, _, v) = line.chomp.partition('=').map { |x| options[:include_whitespace] ? x : x.strip }
+          v.gsub!(/^['"](.*)['"]$/, '\1') if options[:exclude_quotes]
+          parsed[options[:force_downcase] ? k.downcase : k] = (v == '' && options[:empty_value_is_nil]? nil : v)
+        end
+      rescue Errno::ENOENT => e
+        if options[:fallback]
+          Chef::Log.error("fb_helpers: cannot read #{path}: #{e}.  Returning empty hash")
+        else
+          raise "fb_helpers: cannot read #{path}: #{e}."
+        end
+      end
+      parsed
+    end
+
     # parse_timeshard_start() takes a time string and converts its contents to a
     # unix timestamp, to be used in computing timeshard information
     #
@@ -496,7 +558,7 @@ If the has is specified, it takes one or more of the following keys:
     end
 
     def self.windows?
-      RUBY_PLATFORM =~ /mswin|mingw32|windows/
+      RUBY_PLATFORM =~ /mswin|mingw|windows/
     end
 
     # mountpoint? determines if a path string represents a mountpoint
@@ -572,15 +634,42 @@ If the has is specified, it takes one or more of the following keys:
       false
     end
 
-    def self._request_nw_changes_permission(run_context, new_resource)
+    def self.get_hwaddr(interface)
+      addrfile = "/sys/class/net/#{interface}/address"
+      return nil unless ::File.exist?(addrfile)
+      ::File.read(addrfile).strip.upcase
+    end
+
+    def self._request_nw_changes_permission(run_context, new_resource, diff)
       run_context.node.default['fb_helpers']['_nw_perm_requested'] = true
       notification = Chef::Resource::Notification.new(
         'fb_helpers_request_nw_changes[manage]',
         :request_nw_changes,
         new_resource,
       )
+      run_context.node.default['fb_helpers']['_nw_perm_changes_requested'][
+        new_resource.name.to_s] = diff
       notification.fix_resource_reference(run_context.resource_collection)
       run_context.root_run_context.add_delayed_action(notification)
+    end
+
+    # readfile() safely reads file content in a variable,
+    # removing the last line termination.
+    # It is suitable to read a single-liners (sysctl settings or similar).
+    # It would return an empty string when the file is not available.
+    #
+    # Usage:
+    #   readfile(path)
+    #
+    # Arguments:
+    #   path: Required file path
+    def self.readfile(filename)
+      begin
+        value = File.read(filename).chomp
+      rescue Errno::ENOENT
+        return ''
+      end
+      return value
     end
   end
 

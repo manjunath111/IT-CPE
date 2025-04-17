@@ -21,6 +21,21 @@ Usage
 Simply depend on this cookbook from your metadata.rb to get these methods in
 your node.
 
+* `node.os_max_version?(version, full=false)`
+   Compares the OS version (`node['platform_version']` with `version`) and
+   returns `true` if the OS version is, at most `version`. By default compares
+   *only* the *major version* (so `8.2 <= 8.1` because `8 <= 8`).  For comparing
+   the full version set full=true.
+
+* `node.os_min_version?(version, full=false)`
+   Compares the OS version (`node['platform_version']` with `version`) and
+   returns `true` if the OS version is, at least `version`. By default compares
+   *only* the *major version* (so `8.2 >= 8.1` because `8 >= 8`). For comparing
+   the full version set full=true.
+
+   Note that for special cases like 'rawhide' or 'sid', you should use the
+   OS-specific incarnation of this (e.g. `debian_min_full_version?`)
+
 * `node.centos?`
     Is CentOS
 
@@ -38,6 +53,17 @@ your node.
 
 * `node.centos9?`
     Is CentOS Stream 9
+
+* `node.centos10?`
+    Is CentOS Stream 10
+
+* `node.centos_max_version?(v, full=false)`
+    Is RHEL-compatible with a maximum version number of v
+    See os_max_version? for details
+
+* `node.centos_min_version?(v, full=false)`
+    Is RHEL-compatible with a minimum version number of v
+    See os_min_version? for details
 
 * `node.fedora?`
     Is Fedora
@@ -72,6 +98,21 @@ your node.
 * `node.fedora36?`
     Is Fedora 36
 
+* `node.fedora37?`
+    Is Fedora 37
+
+* `node.fedora38?`
+    Is Fedora 38
+
+* `node.fedora39?`
+    Is Fedora 39
+
+* `node.fedora40?`
+    Is Fedora 40
+
+* `node.eln?`
+    Is Fedora ELN
+
 * `node.redhat?`
     Is Redhat Enterprise Linux
 
@@ -87,6 +128,17 @@ your node.
 * `node.redhat9?`
     Is Redhat Enterprise Linux 9
 
+* `node.redhat10?`
+    Is Redhat Enterprise Linux 10
+
+* `node.rhel_max_version?(v, full=false)`
+    Is Redhat Enterprise Linux with a maximum major version number of v
+    See os_max_version? for details.
+
+* `node.rhel_min_version?(v, full=false)`
+    Is Redhat Enterprise Linux with a minimum major version number of v
+    See os_min_version? for details.
+
 * `node.rhel?`
     Is Redhat Enterprise Linux
 
@@ -96,8 +148,14 @@ your node.
 * `node.rhel8?`
     Is Redhat Enterprise Linux 8
 
+* `node.rhel8_8?`
+    Is Redhat Enterprise Linux 8.8
+
 * `node.rhel9?`
     Is Redhat Enterprise Linux 9
+
+* `node.rhel10?`
+    Is Redhat Enterprise Linux 10
 
 * `node.oracle?`
     Is Oracle Enterprise Linux
@@ -113,6 +171,17 @@ your node.
 
 * `node.oracle8?`
     Is Oracle Enterprise Linux 8
+
+* `node.rhel_family?`
+    Is Redhat Enterprise Linux-compatible (eg CentOS, Oracle Linux, Rocky Linux)
+
+* `node.el_max_version?(v, full=false)`
+    Is RHEL-compatible with a maximum version number of v
+    See os_max_version? for details.
+
+* `node.el_min_version?(v, full=false)`
+    Is RHEL-compatible with a minimum version number of v
+    See os_min_version? for details.
 
 * `node.debian?`
     Is Debian
@@ -191,6 +260,15 @@ your node.
 
 * `node.aristaeos?`
     Is network switch running Arista EOS
+
+* `node.aristaeos_4_28_or_newer?`
+    Is network switch running Arista EOS and OS version is 4.28 or newer
+
+* `node.aristaeos_4_30_or_newer?`
+    Is network switch running Arista EOS and OS version is 4.30 or newer
+
+* `node.aristaeos_4_32_or_newer?`
+    Is network switch running Arista EOS and OS version is 4.32 or newer
 
 * `node.embedded?`
     Is embedded Linux, implies 'node.aristaeos?'. These devices likely have
@@ -429,6 +507,13 @@ your node.
    True if `node['fb_helpers']['interface_start_allowed_method']` is set and
    returns true, or if `node.interface_change_allowed?` is true.
 
+* `node.disruptable?`
+    A gate which can be used to limit dangerous code paths to only run during
+    provisioning, boot, or other times when the host is not running a
+    workload and can disrupted.  For initial boot you must
+    pass `CHEF_BOOT_SERVICE=true` as an environment variable from your
+    boot-time chef invocation.
+
 ### FB::Helpers
 The following constants are available:
 
@@ -443,6 +528,12 @@ The following methods are available:
    If the client supports lazy attributes a DelayedEvaluator is returned, but
    if the client does not support lazy attributes the block is evaluated and
    the value is returned
+
+* `FB::Helpers.evaluate_lazy_enumerable { my_enumerable }`
+   Should be used when a potentially nested Enumerable contains a
+   Chef::DelayedEvaluator that will not be directly assigned
+   directly to resource attribute.  This should only be executed at converge time
+   within a lazy block.
 
 * `FB::Helpers.commentify(comment, arg)`
    Commentify takes the string in `comment` and wraps it appropriately
@@ -494,6 +585,17 @@ The following methods are available:
   it matches what is expected. If `fallback` is true, return an empty object
   in case of errors.
 
+* `FB::Helpers.parse_simple_keyvalue_file(path, options)`
+  Parse a simple key/value file with the form key=value and return a hash of
+  key/value pairs, stripping leading and trailing whitespace unless otherwise
+  specified. Accepts the following options:
+  * `:force_downcase` - if true, coerces keys into lower case.
+  * `:empty_value_is_nil` - if true, coerces empty string values to nil.
+  * `:include_whitespace` - if true, treats whitespace in the key/value pairs
+    as semantic
+  * `:exclude_quotes` - if true, removes surrounding quotes
+  * `:fallback` - if true, return an empty hash in case of errors.
+
 * `FB::Helpers.parse_timeshard_start(time)`
   Takes a time string and converts its contents to a unix timestamp,
    to be used in computing timeshard information.
@@ -522,6 +624,10 @@ The following methods are available:
   Test if a group is defined on the system. Usually this would be checked by
   looking at `node['etc']['group']` but if the group was added during the same
   chef run then ohai won't have it, unless ohai was reloaded.
+
+* `FB::Helpers.get_hwaddr(interface)`
+  Return the hardware (MAC) address of the interface or nil if no such interface
+  was found.
 
 * `FB::Version.new(version)`
    Helper class to compare software versions. Sample usage:
@@ -662,6 +768,124 @@ fb_helpers_gated_template '/etc/foo.network' do
   gated_action  Symbol # same actions as regular templates
 end
 ```
+
+#### fb_notify_merger
+Use the `fb_notify_merger` resource to aggregate notifications and subscriptions
+into a single notification which fires in resource order.  This solves the problem
+where, when multiple resources update that need to (for example) restart a service,
+one must currently choose between two flawed options.  Either choose to
+notify `:immediately` (in which case multiple incorrect and unnecessary restarts
+occur), or `:delayed` (in which case the restarts are deduplicated, but happen
+out of order (at the end of the run), and create the opportunity for a (temporary)
+incorrectness).
+
+Consider a common example.  Two configuration files are inputs for a service,
+and updating them should cause the service to be restarted.  In the initial setup
+scenario for a host, the service is not yet running, and we have the following
+recipe code:
+
+```ruby
+template 'A' do
+  ...
+  notifies :restart, 'service[X]', :delayed
+end
+
+template 'B' do
+  ...
+  notifies :restart, 'service[X]', :delayed
+end
+
+service 'X' do
+  action [:enable, :start]
+end
+```
+
+The above code, during initial host setup, will trigger two delayed restarts, then
+the service will be started, then at the end of the run it will be restarted again
+(unnecessarily) due to the delayed notification.
+
+`fb_notify_merger` serves as an in-order aggregation point for notifications, so
+that they can be deduplicated and delivered at the correct point in the run.
+
+When updating the above code with the `fb_notify_merger`, we get:
+
+```ruby
+template 'A' do
+  ...
+  notifies :update, 'fb_notify_merger[C]', :immediately
+end
+
+template 'B' do
+  ...
+  notifies :update, 'fb_notify_merger[C]', :immediately
+end
+
+fb_notify_merger 'C' do
+  notifies :restart, 'service[X]', :immediately
+end
+
+service 'X' do
+  action [:enable, :start]
+end
+```
+
+The above code has no unnecessary restart of the service at the end of the run.
+
+The `fb_notify_merger` resource, when running the `:update` action, flips a bit
+to true, such that when the default `:merge` action runs, if the
+bit was true, the resource is marked as updated and triggers any associated
+notifications.
+
+```ruby
+package 'syslog' do
+  ...
+  notifies :update, 'fb_notify_merger[syslog]', :immediately
+end
+
+template '/etc/sysconfig/syslog' do
+  ...
+  notifies :update, 'fb_notify_merger[syslog]', :immediately
+end
+
+fb_notify_merger 'syslog' do
+  notifies :restart, "service[syslog]", :immediately
+end
+
+service 'syslog' do
+  action [:enable, :start]
+end
+```
+
+In the sample above, even if both the `package` and the `template` update, only
+a single `:restart` is issued against the `service`.
+
+Other examples:
+- Two or more input files are changed in the systemd configuration.  Use the
+  `fb_notify_merger` to aggregate the call to `systemctl daemon-reload` so it
+  only happens once, and in order.
+- Two or more input files for a script are changed.  Use the
+  `fb_notify_merger` to aggregate the `:run` notification for the `execute`
+  resource so it only happens once, and in order.
+
+The `fb_notify_merger` resource order should be _immediately_ before the resource
+which it notifies to have the most correct behavior.
+
+`notifies` and `subscribes` retain the same behavior as upstream chef and both
+work with `fb_notify_merger` (though `notifies` is preferred since it provides stronger
+guarantees).
+
+You must use `:immediately` or `:before` when notifying the `fb_notify_merger`
+resource; if you use `:delayed` the in-order element is lost, and
+the entire point of using `fb_notify_merger` is lost.
+
+Note that this is different from `notify_group`, which has no element of
+aggregating notifications, and only serves to minimize repetition in code.
+
+Also note: `fb_notify_merger` tracks if it has already merged, and will
+fail the run if any subsequent `:update` or `:merge` actions are triggered.
+The `:merge` which triggers the actual aggregated notification should only happen
+a single time, immediately before the resource which is being notified; all
+other flows are fundamentally flawed.
 
 ### Reboot control
 If it's safe for Chef to reboot your host, set `reboot_allowed` to true in

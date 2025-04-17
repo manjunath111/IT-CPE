@@ -18,6 +18,7 @@
 
 resource_name :cpe_flatpak_linux
 provides :cpe_flatpak, :os => 'linux'
+unified_mode(false) if Chef::VERSION >= 18
 default_action :manage
 property :fp, String, :name_property => true
 
@@ -27,7 +28,7 @@ action :manage do
   ign_failure = node['cpe_flatpak']['ignore_failure']
 
   #  Keep Flatpak up to date
-  package 'flatpak' do # ~FB012
+  package 'flatpak' do # rubocop:disable Chef/Meta/CPEPackageResource
     action :upgrade
   end
 

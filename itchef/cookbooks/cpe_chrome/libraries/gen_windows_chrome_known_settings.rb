@@ -14,7 +14,7 @@
 
 # Cookbook Name:: cpe_chrome
 # Library:: gen_windows_chrome_known_settings
-# rubocop:disable Metrics/LineLength
+# rubocop:disable Layout/LineLength
 # @generated
 require_relative 'windows_chrome_settingv2'
 
@@ -539,7 +539,7 @@ module CPE
           false,
         ),
         'DownloadRestrictions' => WindowsChromeFlatSetting.new(
-          'HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome\Recommended',
+          'HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome',
           'DownloadRestrictions',
           :dword,
           false,
@@ -1006,9 +1006,9 @@ module CPE
           :string,
           false,
         ),
-        'SafeBrowsingEnabled' => WindowsChromeFlatSetting.new(
-          'HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome\Recommended',
-          'SafeBrowsingEnabled',
+        'SafeBrowsingProtectionLevel' => WindowsChromeFlatSetting.new(
+          'HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome',
+          'SafeBrowsingProtectionLevel',
           :dword,
           false,
         ),
@@ -1562,4 +1562,4 @@ module CPE
     end
   end
 end
-# rubocop:enable Metrics/LineLength
+# rubocop:enable Layout/LineLength

@@ -17,6 +17,7 @@
 
 resource_name :cpe_chrome_posix
 provides :cpe_chrome, :os => ['darwin', 'linux']
+unified_mode(false) if Chef::VERSION >= 18
 default_action :config
 
 action :config do
@@ -34,10 +35,13 @@ action_class do
     yum_repository 'google-chrome' do
       only_if { node.fedora? || node.centos? }
       description 'Google Chrome repo'
-      baseurl 'http://dl.google.com/linux/chrome/rpm/stable/x86_64'
+      baseurl 'https://dl.google.com/linux/chrome/rpm/stable/x86_64'
       enabled true
       gpgkey 'https://dl.google.com/linux/linux_signing_key.pub'
       gpgcheck true
+      unless node['cpe_chrome']['repo_proxy'].nil?
+        proxy node['cpe_chrome']['repo_proxy']
+      end
       action :create
     end
 
@@ -56,7 +60,7 @@ action_class do
     return unless node.linux?
     return unless node['cpe_chrome']['install_package']
 
-    package 'google-chrome-stable' do
+    package 'google-chrome-stable' do # rubocop:disable Chef/Meta/CPEPackageResource
       only_if do
         node.fedora? || node.centos? || node.debian_family?
       end
@@ -79,9 +83,9 @@ action_class do
     return if prefs.empty? && mprefs.empty?
     case node['os']
     when 'darwin'
-      manage_chrome_macos(mprefs, prefs)
+      manage_chrome_macos(mprefs, FB::Helpers.evaluate_lazy_enumerable(prefs))
     when 'linux'
-      manage_chrome_linux(mprefs, prefs)
+      manage_chrome_linux(mprefs, FB::Helpers.evaluate_lazy_enumerable(prefs))
     end
   end
 
@@ -105,6 +109,7 @@ action_class do
       /etc/opt
       /etc/opt/chrome
       /etc/opt/chrome/policies
+      /etc/opt/chrome/policies/enrollment
       /etc/opt/chrome/policies/managed
       /etc/opt/chrome/policies/recommended
     }.each do |path|
@@ -136,6 +141,17 @@ action_class do
           action :create
           content Chef::JSONCompat.to_json_pretty(preferences)
         end
+      end
+    end
+    file '/etc/opt/chrome/policies/enrollment/CloudManagementEnrollmentToken' do
+      if node['cpe_chrome']['profile']['CloudManagementEnrollmentToken'].nil?
+        action :delete
+      else
+        action :create
+        content node['cpe_chrome']['profile']['CloudManagementEnrollmentToken'].to_s
+        owner node.root_user
+        group node.root_group
+        mode '0644'
       end
     end
   end
@@ -206,14 +222,14 @@ action_class do
     else
       directory '/Library/Google' do
         mode '0755'
-        owner 'root'
+        owner node.root_user
         group 'wheel'
         action :create
       end
       # Create the Master Preferences file
       file master_path do
         mode '0644'
-        owner 'root'
+        owner node.root_user
         group 'wheel'
         action :create
         content Chef::JSONCompat.to_json_pretty(mprefs)

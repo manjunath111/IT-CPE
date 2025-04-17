@@ -63,6 +63,8 @@ module CPE
     # Releases prior to 1803 do not recognize these registry settings and are
     # thus omitted.
     module ReleaseInformation
+      VERSION_23H2 = '23H2'.freeze
+      VERSION_22H2 = '22H2'.freeze
       VERSION_21H2 = '21H2'.freeze
       VERSION_21H1 = '21H1'.freeze
       VERSION_20H2 = '20H2'.freeze
@@ -73,6 +75,8 @@ module CPE
 
       def releases
         [
+          VERSION_23H2,
+          VERSION_22H2,
           VERSION_21H2,
           VERSION_21H1,
           VERSION_20H2,

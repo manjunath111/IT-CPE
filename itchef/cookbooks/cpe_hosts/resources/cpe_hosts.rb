@@ -17,6 +17,7 @@
 
 resource_name :cpe_hosts
 provides :cpe_hosts
+unified_mode(false) if Chef::VERSION >= 18
 default_action :run
 
 action :run do
@@ -57,7 +58,7 @@ action :run do
       content lines.join
     end
   else
-    template HOSTS_FILE do # ~FB031
+    template HOSTS_FILE do
       retries 2
       ignore_failure true
       source 'hosts.erb'
